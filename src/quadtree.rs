@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Component, Debug, Default)]
+#[derive(Component, Debug, Default, Clone, Copy)]
 pub struct TreeNode {
     pub position: Vec2,
     pub entity: Option<Entity>,
@@ -34,7 +34,7 @@ impl QuadTree {
             rect: Rect::from_center_half_size(origin, half_size),
             capacity,
             subdivided: false,
-            children: vec![],
+            children: Vec::new(),
             north_east: None,
             north_west: None,
             south_east: None,
@@ -42,8 +42,8 @@ impl QuadTree {
         };
     }
 
-    fn child_intersects(&self, point: Vec2) -> bool {
-        return self.rect.contains(point);
+    fn child_intersects(&self, point: &Vec2) -> bool {
+        return self.rect.contains(*point);
     }
 
     pub fn add_child(&mut self, child: TreeNode) {
@@ -52,7 +52,6 @@ impl QuadTree {
             self.children.push(child);
             return;
         }
-
         info!("Capacity full, starting to subdivide");
 
         // otherwise, subdivide quad tree
@@ -65,16 +64,14 @@ impl QuadTree {
             self.south_east.as_mut(),
             self.south_west.as_mut(),
         ] {
-            info!("Option: {:?}", option);
             if let Some(segment) = option {
-                if segment.child_intersects(child.position) {
-                    // add child and return
-                    info!("Adding child to segment! {:?}", segment);
+                if segment.child_intersects(&child.position) {
                     segment.add_child(child);
-                    return;
                 }
             }
         }
+
+        // info!("Failed to find place for child: {:?}", child.position);
     }
 
     pub fn get_childen(&mut self) -> &[TreeNode] {

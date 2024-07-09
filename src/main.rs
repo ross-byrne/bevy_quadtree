@@ -61,6 +61,10 @@ fn setup(
     }
 
     info!("Children: {:?}", world_tree.get_childen().len());
+    info!(
+        "Number of Subdivisions: {}",
+        world_tree.get_tree_rects().len()
+    );
     // info!("{:?}", world_tree);
     info!("Is Subdivided: {}", world_tree.subdivided);
     info!("All Tree Rects: {:?}", world_tree.get_tree_rects().len());
