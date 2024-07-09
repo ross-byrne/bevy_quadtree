@@ -89,6 +89,7 @@ impl QuadTree {
             return self.children.as_slice();
         }
 
+        // TODO: check children for sub divisions
         return self.children.as_slice();
     }
 
