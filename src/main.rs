@@ -34,7 +34,7 @@ fn setup(
     // initialise world tree. Centered to 0.0, 0.0
     let origin: Vec2 = Vec2::new(0.0, 0.0);
     let half_size: Vec2 = Vec2::new(WORLD_WIDTH / 2.0, WORLD_HEIGHT / 2.0);
-    *world_tree = WorldTree(QuadTree::new(origin, half_size, 400));
+    *world_tree = WorldTree(QuadTree::new(origin, half_size, 5));
 
     // create some objects
     let mut rng = rand::thread_rng();
@@ -61,9 +61,9 @@ fn setup(
     }
 
     info!("Children: {:?}", world_tree.get_childen().len());
-    info!("{:?}", world_tree);
+    // info!("{:?}", world_tree);
     info!("Is Subdivided: {}", world_tree.subdivided);
-    info!("All Tree Rects: {:?}", world_tree.get_tree_rects());
+    info!("All Tree Rects: {:?}", world_tree.get_tree_rects().len());
 }
 
 fn draw_qtree_gizmos(mut gizmos: Gizmos, mut world_tree: ResMut<WorldTree>, _time: Res<Time>) {

@@ -42,16 +42,39 @@ impl QuadTree {
         };
     }
 
+    fn child_intersects(&self, point: Vec2) -> bool {
+        return self.rect.contains(point);
+    }
+
     pub fn add_child(&mut self, child: TreeNode) {
         if self.children.len() < self.capacity {
+            info!("Adding child!");
             self.children.push(child);
             return;
         }
 
-        // otherwise, subdivide quad tree
-        self.subdivide_tree()
+        info!("Capacity full, starting to subdivide");
 
-        // somehow figure out where to put child???
+        // otherwise, subdivide quad tree
+        self.subdivide_tree();
+
+        // check each segment if child is contained within them
+        for option in [
+            self.north_east.as_mut(),
+            self.north_west.as_mut(),
+            self.south_east.as_mut(),
+            self.south_west.as_mut(),
+        ] {
+            info!("Option: {:?}", option);
+            if let Some(segment) = option {
+                if segment.child_intersects(child.position) {
+                    // add child and return
+                    info!("Adding child to segment! {:?}", segment);
+                    segment.add_child(child);
+                    return;
+                }
+            }
+        }
     }
 
     pub fn get_childen(&mut self) -> &[TreeNode] {
@@ -71,17 +94,15 @@ impl QuadTree {
         // get childen rects
         let mut child_rects: Vec<Rect> = vec![];
 
-        if let Some(child) = self.north_east.as_mut() {
-            child_rects.append(&mut child.get_tree_rects());
-        }
-        if let Some(child) = self.north_west.as_mut() {
-            child_rects.append(&mut child.get_tree_rects());
-        }
-        if let Some(child) = self.south_east.as_mut() {
-            child_rects.append(&mut child.get_tree_rects());
-        }
-        if let Some(child) = self.south_west.as_mut() {
-            child_rects.append(&mut child.get_tree_rects());
+        for option in [
+            self.north_east.as_mut(),
+            self.north_west.as_mut(),
+            self.south_east.as_mut(),
+            self.south_west.as_mut(),
+        ] {
+            if let Some(segment) = option {
+                child_rects.append(&mut segment.get_tree_rects());
+            }
         }
 
         return child_rects;
