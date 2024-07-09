@@ -1,28 +1,34 @@
 use bevy::prelude::*;
 
-#[derive(Component, Debug, Default, Deref, DerefMut)]
-pub struct Point(pub Vec2);
+#[derive(Component, Debug, Default)]
+pub struct TreeNode {
+    pub position: Vec2,
+    pub entity: Option<Entity>,
+}
 
-impl Point {
-    pub fn new(x: f32, y: f32) -> Self {
-        return Self(Vec2::new(x, y));
+impl TreeNode {
+    pub fn new(entity: Option<Entity>, x: f32, y: f32) -> Self {
+        return Self {
+            entity,
+            position: Vec2::new(x, y),
+        };
     }
 }
 
 // Need to use box here becuase struct is recursive
 #[derive(Debug, Default)]
-pub struct QuadTree<T> {
-    pub children: Vec<T>,
+pub struct QuadTree {
+    pub children: Vec<TreeNode>,
     pub subdivided: bool,
-    dimensions: Rect,
+    pub dimensions: Rect,
     capacity: usize,
-    north_east: Option<Box<QuadTree<T>>>,
-    north_west: Option<Box<QuadTree<T>>>,
-    south_east: Option<Box<QuadTree<T>>>,
-    south_west: Option<Box<QuadTree<T>>>,
+    north_east: Option<Box<QuadTree>>,
+    north_west: Option<Box<QuadTree>>,
+    south_east: Option<Box<QuadTree>>,
+    south_west: Option<Box<QuadTree>>,
 }
 
-impl<T> QuadTree<T> {
+impl QuadTree {
     pub fn new(origin: Vec2, half_size: Vec2, capacity: usize) -> Self {
         return Self {
             dimensions: Rect::from_center_half_size(origin, half_size),
@@ -36,7 +42,7 @@ impl<T> QuadTree<T> {
         };
     }
 
-    pub fn add_child(&mut self, child: T) {
+    pub fn add_child(&mut self, child: TreeNode) {
         if self.children.len() < self.capacity {
             self.children.push(child);
             return;
@@ -48,7 +54,7 @@ impl<T> QuadTree<T> {
         // somehow figure out where to put child???
     }
 
-    pub fn get_childen(&mut self) -> &[T] {
+    pub fn get_childen(&mut self) -> &[TreeNode] {
         if !self.subdivided {
             return self.children.as_slice();
         }
@@ -57,7 +63,7 @@ impl<T> QuadTree<T> {
     }
 
     // hide ugly types so making new segments is easier to read
-    fn new_tree_segment(&self, origin: Vec2, half_size: Vec2) -> Option<Box<QuadTree<T>>> {
+    fn new_tree_segment(&self, origin: Vec2, half_size: Vec2) -> Option<Box<QuadTree>> {
         let new_boxed_tree = Box::new(Self::new(origin, half_size, self.capacity));
         return Some(new_boxed_tree);
     }
