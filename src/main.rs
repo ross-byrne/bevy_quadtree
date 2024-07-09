@@ -10,6 +10,7 @@ mod quadtree;
 
 const WORLD_HEIGHT: f32 = 600.0;
 const WORLD_WIDTH: f32 = 1000.0;
+const QTREE_CAPACITY: usize = 5;
 
 #[derive(Resource, Debug, Default, Deref, DerefMut)]
 struct WorldTree(pub QuadTree);
@@ -34,7 +35,7 @@ fn setup(
     // initialise world tree. Centered to 0.0, 0.0
     let origin: Vec2 = Vec2::new(0.0, 0.0);
     let half_size: Vec2 = Vec2::new(WORLD_WIDTH / 2.0, WORLD_HEIGHT / 2.0);
-    *world_tree = WorldTree(QuadTree::new(origin, half_size, 5));
+    *world_tree = WorldTree(QuadTree::new(origin, half_size, QTREE_CAPACITY));
 
     // create some objects
     let mut rng = rand::thread_rng();
@@ -57,7 +58,7 @@ fn setup(
             .id();
 
         // add entity to quadtree
-        world_tree.add_child(TreeNode::new(Some(entity), x, y));
+        world_tree.insert(TreeNode::new(Some(entity), x, y));
     }
 
     info!("Children: {:?}", world_tree.get_childen().len());

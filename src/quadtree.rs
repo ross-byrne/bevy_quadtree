@@ -53,7 +53,7 @@ impl QuadTree {
         return self.rect.contains(*point);
     }
 
-    pub fn add_child(&mut self, child: TreeNode) {
+    pub fn insert(&mut self, child: TreeNode) {
         if self.children.len() < self.capacity {
             info!("Adding child to segment index: {}", self.index);
             self.children.push(child);
@@ -74,9 +74,9 @@ impl QuadTree {
             self.south_west.as_mut(),
         ] {
             if let Some(segment) = option {
-                // info!("Checking index: {}", segment.index);
                 if segment.child_intersects(&child.position) {
-                    segment.add_child(child);
+                    segment.insert(child);
+                    return;
                 }
             }
         }
