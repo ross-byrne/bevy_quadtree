@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
 #[derive(Component, Debug)]
-struct Position {
-    x: f32,
-    y: f32,
+struct Point {
+    value: Vec2,
 }
 
 fn main() {
@@ -16,11 +15,13 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     // add some points
-    commands.spawn(Position { x: 10.0, y: 10.0 });
+    commands.spawn(Point {
+        value: Vec2::new(10.0, 10.0),
+    });
 }
 
-fn print_positions(mut _commands: Commands, q: Query<&Position>) {
-    for position in q.iter() {
-        info!("Hello Position: {:?}", position);
+fn print_positions(mut _commands: Commands, q: Query<&Point>) {
+    for point in q.iter() {
+        info!("Hello Position: {:?}", point.value);
     }
 }
