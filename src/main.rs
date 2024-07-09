@@ -1,21 +1,18 @@
 use bevy::{
     color::palettes::css::GREEN,
     prelude::*,
-    sprite::{MaterialMesh2dBundle, Mesh2dHandle, Wireframe2dConfig, Wireframe2dPlugin},
+    sprite::{MaterialMesh2dBundle, Mesh2dHandle, Wireframe2dPlugin},
 };
 use quadtree::{QuadTree, TreeNode};
 use rand::prelude::*;
 
 mod quadtree;
 
-const WORLD_HEIGHT: f32 = 1000.0;
-const WORLD_WIDTH: f32 = 1000.0;
+const WORLD_HEIGHT: f32 = 360.0;
+const WORLD_WIDTH: f32 = 600.0;
 
 #[derive(Resource, Debug, Default, Deref, DerefMut)]
 struct WorldTree(pub QuadTree);
-
-// #[derive(Component, Debug)]
-// pub struct Circle;
 
 fn main() {
     App::new()
@@ -37,13 +34,17 @@ fn setup(
     // initialise world tree. Centered to 0.0, 0.0
     let origin: Vec2 = Vec2::new(0.0, 0.0);
     let half_size: Vec2 = Vec2::new(WORLD_WIDTH / 2.0, WORLD_HEIGHT / 2.0);
-    *world_tree = WorldTree(QuadTree::new(origin, half_size, 4));
+    *world_tree = WorldTree(QuadTree::new(origin, half_size, 400));
 
     // create some objects
     let mut rng = rand::thread_rng();
-    for _ in 1..20 {
-        let x: f32 = rng.gen_range(-(WORLD_WIDTH / 2.0)..WORLD_WIDTH / 2.0);
-        let y: f32 = rng.gen_range(-(WORLD_HEIGHT / 2.0)..WORLD_HEIGHT / 2.0);
+    let spawn_padding: f32 = 10.0;
+
+    for _ in 1..100 {
+        let x: f32 = rng
+            .gen_range(-(WORLD_WIDTH / 2.0) + spawn_padding..(WORLD_WIDTH / 2.0) - spawn_padding);
+        let y: f32 = rng
+            .gen_range(-(WORLD_HEIGHT / 2.0) + spawn_padding..WORLD_HEIGHT / 2.0 - spawn_padding);
 
         // spawn entity
         let entity: Entity = commands
@@ -62,16 +63,12 @@ fn setup(
     info!("Children: {:?}", world_tree.get_childen().len());
     info!("{:?}", world_tree);
     info!("Is Subdivided: {}", world_tree.subdivided);
+    info!("All Tree Rects: {:?}", world_tree.get_tree_rects());
 }
 
-fn draw_qtree_gizmos(mut gizmos: Gizmos, world_tree: Res<WorldTree>, _time: Res<Time>) {
-    // draw tree root
-    gizmos.rect_2d(
-        world_tree.dimensions.center(),
-        0.0,
-        world_tree.dimensions.size(),
-        GREEN,
-    )
-
-    // TODO: draw child segments
+fn draw_qtree_gizmos(mut gizmos: Gizmos, mut world_tree: ResMut<WorldTree>, _time: Res<Time>) {
+    // draw quad tree segments
+    for rect in world_tree.get_tree_rects() {
+        gizmos.rect_2d(rect.center(), 0.0, rect.size(), GREEN)
+    }
 }

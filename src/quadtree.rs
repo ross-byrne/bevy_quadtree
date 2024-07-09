@@ -20,7 +20,7 @@ impl TreeNode {
 pub struct QuadTree {
     pub children: Vec<TreeNode>,
     pub subdivided: bool,
-    pub dimensions: Rect,
+    pub rect: Rect,
     capacity: usize,
     north_east: Option<Box<QuadTree>>,
     north_west: Option<Box<QuadTree>>,
@@ -31,7 +31,7 @@ pub struct QuadTree {
 impl QuadTree {
     pub fn new(origin: Vec2, half_size: Vec2, capacity: usize) -> Self {
         return Self {
-            dimensions: Rect::from_center_half_size(origin, half_size),
+            rect: Rect::from_center_half_size(origin, half_size),
             capacity,
             subdivided: false,
             children: vec![],
@@ -62,6 +62,31 @@ impl QuadTree {
         return self.children.as_slice();
     }
 
+    // Just for display purposes
+    pub fn get_tree_rects(&mut self) -> Vec<Rect> {
+        if !self.subdivided {
+            return vec![self.rect.clone()];
+        }
+
+        // get childen rects
+        let mut child_rects: Vec<Rect> = vec![];
+
+        if let Some(child) = self.north_east.as_mut() {
+            child_rects.append(&mut child.get_tree_rects());
+        }
+        if let Some(child) = self.north_west.as_mut() {
+            child_rects.append(&mut child.get_tree_rects());
+        }
+        if let Some(child) = self.south_east.as_mut() {
+            child_rects.append(&mut child.get_tree_rects());
+        }
+        if let Some(child) = self.south_west.as_mut() {
+            child_rects.append(&mut child.get_tree_rects());
+        }
+
+        return child_rects;
+    }
+
     // hide ugly types so making new segments is easier to read
     fn new_tree_segment(&self, origin: Vec2, half_size: Vec2) -> Option<Box<QuadTree>> {
         let new_boxed_tree = Box::new(Self::new(origin, half_size, self.capacity));
@@ -71,13 +96,13 @@ impl QuadTree {
     fn subdivide_tree(&mut self) {
         // calculate size of new segment
         // by halving the existing size
-        let half_h = self.dimensions.height() / 2.0;
-        let half_w = self.dimensions.width() / 2.0;
+        let half_h = self.rect.height() / 2.0;
+        let half_w = self.rect.width() / 2.0;
         let half_size: Vec2 = Vec2::new(half_w, half_h);
 
         // parent origin
-        let x = self.dimensions.center().x;
-        let y = self.dimensions.center().y;
+        let x = self.rect.center().x;
+        let y = self.rect.center().y;
 
         // calculate origin point for each new section
         let ne_origin: Vec2 = Vec2::new(x - half_w, y + half_h);
