@@ -14,6 +14,7 @@ impl Point {
 pub struct QuadTree<T> {
     pub children: Vec<T>,
     pub subdivided: bool,
+    dimensions: Rect,
     capacity: usize,
     north_east: Option<Box<QuadTree<T>>>,
     north_west: Option<Box<QuadTree<T>>>,
@@ -22,8 +23,9 @@ pub struct QuadTree<T> {
 }
 
 impl<T> QuadTree<T> {
-    pub fn new(capacity: usize) -> Self {
+    pub fn new(origin: Vec2, half_size: Vec2, capacity: usize) -> Self {
         return Self {
+            dimensions: Rect::from_center_half_size(origin, half_size),
             capacity,
             subdivided: false,
             children: vec![],
@@ -54,20 +56,36 @@ impl<T> QuadTree<T> {
         return self.children.as_slice();
     }
 
+    // hide ugly types so making new segments is easier to read
+    fn new_tree_segment(&self, origin: Vec2, half_size: Vec2) -> Option<Box<QuadTree<T>>> {
+        let new_boxed_tree = Box::new(Self::new(origin, half_size, self.capacity));
+        return Some(new_boxed_tree);
+    }
+
     fn subdivide_tree(&mut self) {
-        let new_boxed_tree = Box::new(Self::new(self.capacity));
-        self.north_east = Some(new_boxed_tree);
+        // calculate size of new segment
+        // by halving the existing size
+        let half_h = self.dimensions.height() / 2.0;
+        let half_w = self.dimensions.width() / 2.0;
+        let half_size: Vec2 = Vec2::new(half_w, half_h);
 
-        let new_boxed_tree = Box::new(Self::new(self.capacity));
-        self.north_west = Some(new_boxed_tree);
+        // parent origin
+        let x = self.dimensions.center().x;
+        let y = self.dimensions.center().y;
 
-        let new_boxed_tree = Box::new(Self::new(self.capacity));
-        self.south_east = Some(new_boxed_tree);
+        // calculate origin point for each new section
+        let ne_origin: Vec2 = Vec2::new(x - half_w, y + half_h);
+        let nw_origin: Vec2 = Vec2::new(x + half_w, y + half_h);
+        let se_origin: Vec2 = Vec2::new(x - half_w, y - half_h);
+        let sw_origin: Vec2 = Vec2::new(x + half_w, y - half_h);
 
-        let new_boxed_tree = Box::new(Self::new(self.capacity));
-        self.south_west = Some(new_boxed_tree);
+        // create new tree segments
+        self.north_east = self.new_tree_segment(ne_origin, half_size);
+        self.north_west = self.new_tree_segment(nw_origin, half_size);
+        self.south_east = self.new_tree_segment(se_origin, half_size);
+        self.south_west = self.new_tree_segment(sw_origin, half_size);
 
-        // make as subdivided
+        // mark as subdivided
         self.subdivided = true;
     }
 }
