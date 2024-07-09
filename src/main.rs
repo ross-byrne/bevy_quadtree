@@ -8,8 +8,8 @@ use rand::prelude::*;
 
 mod quadtree;
 
-const WORLD_HEIGHT: f32 = 360.0;
-const WORLD_WIDTH: f32 = 600.0;
+const WORLD_HEIGHT: f32 = 600.0;
+const WORLD_WIDTH: f32 = 1000.0;
 
 #[derive(Resource, Debug, Default, Deref, DerefMut)]
 struct WorldTree(pub QuadTree);

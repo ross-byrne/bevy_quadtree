@@ -22,6 +22,7 @@ pub struct QuadTree {
     pub subdivided: bool,
     pub rect: Rect,
     capacity: usize,
+    index: usize,
     north_east: Option<Box<QuadTree>>,
     north_west: Option<Box<QuadTree>>,
     south_east: Option<Box<QuadTree>>,
@@ -30,9 +31,15 @@ pub struct QuadTree {
 
 impl QuadTree {
     pub fn new(origin: Vec2, half_size: Vec2, capacity: usize) -> Self {
+        // calls new with 0 index to signify root
+        return Self::new_child_segment(origin, half_size, capacity, 0);
+    }
+
+    fn new_child_segment(origin: Vec2, half_size: Vec2, capacity: usize, index: usize) -> Self {
         return Self {
             rect: Rect::from_center_half_size(origin, half_size),
             capacity,
+            index,
             subdivided: false,
             children: Vec::new(),
             north_east: None,
@@ -48,14 +55,16 @@ impl QuadTree {
 
     pub fn add_child(&mut self, child: TreeNode) {
         if self.children.len() < self.capacity {
-            info!("Adding child!");
+            info!("Adding child to segment index: {}", self.index);
             self.children.push(child);
             return;
         }
-        info!("Capacity full, starting to subdivide");
 
-        // otherwise, subdivide quad tree
-        self.subdivide_tree();
+        if !self.subdivided {
+            info!("Capacity full, starting to subdivide");
+            // otherwise, subdivide quad tree
+            self.subdivide_tree();
+        }
 
         // check each segment if child is contained within them
         for option in [
@@ -65,6 +74,7 @@ impl QuadTree {
             self.south_west.as_mut(),
         ] {
             if let Some(segment) = option {
+                // info!("Checking index: {}", segment.index);
                 if segment.child_intersects(&child.position) {
                     segment.add_child(child);
                 }
@@ -88,9 +98,12 @@ impl QuadTree {
             return vec![self.rect.clone()];
         }
 
-        // get childen rects
         let mut child_rects: Vec<Rect> = vec![];
 
+        // add root rect to list
+        child_rects.append(&mut vec![self.rect.clone()]);
+
+        // then get childen rects
         for option in [
             self.north_east.as_mut(),
             self.north_west.as_mut(),
@@ -106,33 +119,39 @@ impl QuadTree {
     }
 
     // hide ugly types so making new segments is easier to read
-    fn new_tree_segment(&self, origin: Vec2, half_size: Vec2) -> Option<Box<QuadTree>> {
-        let new_boxed_tree = Box::new(Self::new(origin, half_size, self.capacity));
+    fn new_tree_segment(&self, origin: &Vec2, half_size: &Vec2) -> Option<Box<QuadTree>> {
+        let new_boxed_tree = Box::new(Self::new_child_segment(
+            *origin,
+            *half_size,
+            self.capacity,
+            self.index + 1,
+        ));
         return Some(new_boxed_tree);
     }
 
     fn subdivide_tree(&mut self) {
-        // calculate size of new segment
-        // by halving the existing size
-        let half_h = self.rect.height() / 2.0;
-        let half_w = self.rect.width() / 2.0;
-        let half_size: Vec2 = Vec2::new(half_w, half_h);
+        // calculate size of new segment by getting a quarter of the parent size
+        // because we need half the parent size
+        // and half of that again to create new rect
+        let h = self.rect.height() / 4.0;
+        let w = self.rect.width() / 4.0;
+        let half_size: Vec2 = Vec2::new(w, h);
 
         // parent origin
         let x = self.rect.center().x;
         let y = self.rect.center().y;
 
         // calculate origin point for each new section
-        let ne_origin: Vec2 = Vec2::new(x - half_w, y + half_h);
-        let nw_origin: Vec2 = Vec2::new(x + half_w, y + half_h);
-        let se_origin: Vec2 = Vec2::new(x - half_w, y - half_h);
-        let sw_origin: Vec2 = Vec2::new(x + half_w, y - half_h);
+        let ne_origin: Vec2 = Vec2::new(x - w, y + h);
+        let nw_origin: Vec2 = Vec2::new(x + w, y + h);
+        let se_origin: Vec2 = Vec2::new(x - w, y - h);
+        let sw_origin: Vec2 = Vec2::new(x + w, y - h);
 
         // create new tree segments
-        self.north_east = self.new_tree_segment(ne_origin, half_size);
-        self.north_west = self.new_tree_segment(nw_origin, half_size);
-        self.south_east = self.new_tree_segment(se_origin, half_size);
-        self.south_west = self.new_tree_segment(sw_origin, half_size);
+        self.north_east = self.new_tree_segment(&ne_origin, &half_size);
+        self.north_west = self.new_tree_segment(&nw_origin, &half_size);
+        self.south_east = self.new_tree_segment(&se_origin, &half_size);
+        self.south_west = self.new_tree_segment(&sw_origin, &half_size);
 
         // mark as subdivided
         self.subdivided = true;
