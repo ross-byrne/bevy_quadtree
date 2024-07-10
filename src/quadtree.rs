@@ -32,10 +32,10 @@ pub struct QuadTree {
 impl QuadTree {
     pub fn new(origin: Vec2, half_size: Vec2, capacity: usize) -> Self {
         // calls new with 0 index to signify root
-        return Self::new_child_segment(origin, half_size, capacity, 0);
+        return Self::new_segment(origin, half_size, capacity, 0);
     }
 
-    fn new_child_segment(origin: Vec2, half_size: Vec2, capacity: usize, index: usize) -> Self {
+    fn new_segment(origin: Vec2, half_size: Vec2, capacity: usize, index: usize) -> Self {
         return Self {
             rect: Rect::from_center_half_size(origin, half_size),
             capacity,
@@ -148,7 +148,7 @@ impl QuadTree {
 
     // hide ugly types so making new segments is easier to read
     fn new_tree_segment(&self, origin: &Vec2, half_size: &Vec2) -> Option<Box<QuadTree>> {
-        let new_boxed_tree = Box::new(Self::new_child_segment(
+        let new_boxed_tree = Box::new(Self::new_segment(
             *origin,
             *half_size,
             self.capacity,
