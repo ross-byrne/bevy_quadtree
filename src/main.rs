@@ -1,5 +1,6 @@
+use bevy::window::PrimaryWindow;
 use bevy::{
-    color::palettes::css::GREEN,
+    color::palettes::css::{GREEN, RED},
     prelude::*,
     sprite::{MaterialMesh2dBundle, Mesh2dHandle, Wireframe2dPlugin},
 };
@@ -12,15 +13,21 @@ const WORLD_HEIGHT: f32 = 600.0;
 const WORLD_WIDTH: f32 = 1000.0;
 const QTREE_CAPACITY: usize = 6;
 
+#[derive(Component)]
+struct MainCamera;
+
 #[derive(Resource, Debug, Default, Deref, DerefMut)]
 struct WorldTree(pub QuadTree);
+
+#[derive(Component)]
+struct CaptureRect;
 
 fn main() {
     App::new()
         .init_resource::<WorldTree>()
         .add_plugins((DefaultPlugins, Wireframe2dPlugin))
         .add_systems(Startup, setup)
-        .add_systems(Update, draw_qtree_gizmos)
+        .add_systems(Update, (draw_qtree_gizmos, mouse_button_input))
         .run();
 }
 
@@ -30,7 +37,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2dBundle::default(), MainCamera));
 
     // initialise world tree. Centered to 0.0, 0.0
     let origin: Vec2 = Vec2::new(0.0, 0.0);
@@ -68,9 +75,59 @@ fn setup(
     );
 }
 
-fn draw_qtree_gizmos(mut gizmos: Gizmos, world_tree: ResMut<WorldTree>, _time: Res<Time>) {
+fn draw_qtree_gizmos(
+    mut gizmos: Gizmos,
+    world_tree: ResMut<WorldTree>,
+    capture_rect: Query<&Transform, With<CaptureRect>>,
+) {
     // draw quad tree segments
     for rect in world_tree.get_tree_rects() {
         gizmos.rect_2d(rect.center(), 0.0, rect.size(), GREEN)
+    }
+
+    // draw capture rect
+    if let Ok(tansform) = capture_rect.get_single() {
+        gizmos.rect_2d(
+            tansform.translation.xy(),
+            0.0,
+            Vec2::new(160.0, 120.0),
+            Color::from(RED),
+        );
+    };
+}
+
+fn mouse_button_input(
+    mut commands: Commands,
+    buttons: Res<ButtonInput<MouseButton>>,
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    capture_rect: Query<Entity, With<CaptureRect>>,
+) {
+    if buttons.just_pressed(MouseButton::Left) {
+        let window = q_window.single();
+        let (camera, camera_transform) = q_camera.single();
+
+        // check if the cursor is inside the window and get its position
+        // then, ask bevy to convert into world coordinates, and truncate to discard Z
+        let Some(world_position) = window
+            .cursor_position()
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+            .map(|ray| ray.origin.truncate())
+        else {
+            return;
+        };
+
+        info!("World coords: {}/{}", world_position.x, world_position.y);
+
+        if let Ok(entity) = capture_rect.get_single() {
+            // remove exiting capture rect
+            commands.entity(entity).despawn_recursive();
+        }
+
+        // spawn new one
+        commands.spawn((
+            CaptureRect,
+            Transform::from_xyz(world_position.x, world_position.y, 1.0),
+        ));
     }
 }
