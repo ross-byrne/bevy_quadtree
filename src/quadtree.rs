@@ -53,11 +53,15 @@ impl QuadTree {
         return self.rect.contains(*point);
     }
 
-    pub fn insert(&mut self, child: TreeNode) {
+    pub fn insert(&mut self, child: TreeNode) -> bool {
+        // return false if child doesn't intersect
+        if !self.child_intersects(&child.position) {
+            return false;
+        }
+
         if self.children.len() < self.capacity {
-            info!("Adding child to segment index: {}", self.index);
             self.children.push(child);
-            return;
+            return true;
         }
 
         if !self.subdivided {
@@ -66,57 +70,80 @@ impl QuadTree {
             self.subdivide_tree();
         }
 
-        // check each segment if child is contained within them
-        for option in [
-            self.north_east.as_mut(),
-            self.north_west.as_mut(),
-            self.south_east.as_mut(),
-            self.south_west.as_mut(),
+        // unwrap segments because they exist after subdivision
+        let ne: &mut QuadTree = self.north_east.as_mut().unwrap();
+        let nw: &mut QuadTree = self.north_west.as_mut().unwrap();
+        let se: &mut QuadTree = self.south_east.as_mut().unwrap();
+        let sw: &mut QuadTree = self.south_west.as_mut().unwrap();
+
+        // only insert into one segment and return
+        let result = ne.insert(child) || nw.insert(child) || se.insert(child) || sw.insert(child);
+        assert!(result, "Failed to add child to a segment!");
+
+        return result;
+    }
+
+    pub fn get_childen(&mut self) -> Vec<&TreeNode> {
+        if !self.subdivided {
+            let mut result: Vec<&TreeNode> = vec![];
+
+            for child in self.children.as_slice() {
+                result.push(child);
+            }
+            return result;
+        }
+
+        // unwrap segments because they exist after subdivision
+        let ne: &QuadTree = self.north_east.as_ref().unwrap();
+        let nw: &QuadTree = self.north_west.as_ref().unwrap();
+        let se: &QuadTree = self.south_east.as_ref().unwrap();
+        let sw: &QuadTree = self.south_west.as_ref().unwrap();
+
+        let mut result: Vec<&TreeNode> = vec![];
+
+        for child_list in [
+            self.children.as_slice(),
+            ne.children.as_slice(),
+            nw.children.as_slice(),
+            se.children.as_slice(),
+            sw.children.as_slice(),
         ] {
-            if let Some(segment) = option {
-                if segment.child_intersects(&child.position) {
-                    segment.insert(child);
-                    return;
-                }
+            for child in child_list {
+                result.push(child);
             }
         }
 
-        // info!("Failed to find place for child: {:?}", child.position);
-    }
-
-    pub fn get_childen(&mut self) -> &[TreeNode] {
-        if !self.subdivided {
-            return self.children.as_slice();
-        }
-
-        // TODO: check children for sub divisions
-        return self.children.as_slice();
+        return result;
     }
 
     // Just for display purposes
-    pub fn get_tree_rects(&mut self) -> Vec<Rect> {
+    pub fn get_tree_rects(&self) -> Vec<&Rect> {
         if !self.subdivided {
-            return vec![self.rect.clone()];
+            return vec![&self.rect];
         }
 
-        let mut child_rects: Vec<Rect> = vec![];
+        // unwrap segments because they exist after subdivision
+        let ne: &QuadTree = self.north_east.as_ref().unwrap();
+        let nw: &QuadTree = self.north_west.as_ref().unwrap();
+        let se: &QuadTree = self.south_east.as_ref().unwrap();
+        let sw: &QuadTree = self.south_west.as_ref().unwrap();
 
-        // add root rect to list
-        child_rects.append(&mut vec![self.rect.clone()]);
+        let mut result: Vec<&Rect> = vec![];
 
-        // then get childen rects
-        for option in [
-            self.north_east.as_mut(),
-            self.north_west.as_mut(),
-            self.south_east.as_mut(),
-            self.south_west.as_mut(),
+        // get references to all rects
+        for child_list in [
+            &[&self.rect],
+            ne.get_tree_rects().as_slice(),
+            nw.get_tree_rects().as_slice(),
+            se.get_tree_rects().as_slice(),
+            sw.get_tree_rects().as_slice(),
         ] {
-            if let Some(segment) = option {
-                child_rects.append(&mut segment.get_tree_rects());
+            for child in child_list {
+                result.push(*child);
             }
         }
 
-        return child_rects;
+        return result;
     }
 
     // hide ugly types so making new segments is easier to read

@@ -71,7 +71,7 @@ fn setup(
     info!("All Tree Rects: {:?}", world_tree.get_tree_rects().len());
 }
 
-fn draw_qtree_gizmos(mut gizmos: Gizmos, mut world_tree: ResMut<WorldTree>, _time: Res<Time>) {
+fn draw_qtree_gizmos(mut gizmos: Gizmos, world_tree: ResMut<WorldTree>, _time: Res<Time>) {
     // draw quad tree segments
     for rect in world_tree.get_tree_rects() {
         gizmos.rect_2d(rect.center(), 0.0, rect.size(), GREEN)
