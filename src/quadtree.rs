@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 
-#[derive(Component, Debug, Default, Clone, Copy)]
+#[derive(Component, Debug, Default, Clone)]
 pub struct TreeNode {
     pub position: Vec2,
-    pub entity: Option<Entity>,
+    pub _entity: Option<Entity>,
 }
 
 impl TreeNode {
-    pub fn new(entity: Option<Entity>, x: f32, y: f32) -> Self {
+    pub fn new(_entity: Option<Entity>, x: f32, y: f32) -> Self {
         return Self {
-            entity,
+            _entity,
             position: Vec2::new(x, y),
         };
     }
@@ -41,7 +41,7 @@ impl QuadTree {
             capacity,
             index,
             subdivided: false,
-            children: Vec::new(),
+            children: Vec::with_capacity(capacity),
             north_east: None,
             north_west: None,
             south_east: None,
@@ -53,28 +53,24 @@ impl QuadTree {
         return self.rect.contains(*point);
     }
 
-    pub fn insert(&mut self, child: TreeNode) -> bool {
+    pub fn insert(&mut self, child: &TreeNode) -> bool {
         // return false if child doesn't intersect
         if !self.child_intersects(&child.position) {
             return false;
         }
 
         if self.children.len() < self.capacity {
-            self.children.push(child);
+            self.children.push(child.to_owned());
             return true;
         }
 
+        // subdivide if at capacity
         if !self.subdivided {
-            info!("Capacity full, starting to subdivide");
-            // otherwise, subdivide quad tree
             self.subdivide_tree();
         }
 
-        // unwrap segments because they exist after subdivision
-        let ne: &mut QuadTree = self.north_east.as_mut().unwrap();
-        let nw: &mut QuadTree = self.north_west.as_mut().unwrap();
-        let se: &mut QuadTree = self.south_east.as_mut().unwrap();
-        let sw: &mut QuadTree = self.south_west.as_mut().unwrap();
+        // get segments
+        let (ne, nw, se, sw) = self.get_segments_as_mut();
 
         // only insert into one segment and return
         let result = ne.insert(child) || nw.insert(child) || se.insert(child) || sw.insert(child);
@@ -83,34 +79,29 @@ impl QuadTree {
         return result;
     }
 
-    pub fn get_childen(&mut self) -> Vec<&TreeNode> {
-        if !self.subdivided {
-            let mut result: Vec<&TreeNode> = vec![];
+    pub fn get_childen(&self) -> Vec<&TreeNode> {
+        // get children as ref
+        let mut result = self.children.iter().collect::<Vec<&TreeNode>>();
 
-            for child in self.children.as_slice() {
-                result.push(child);
-            }
+        // no sub divisions, return early
+        if !self.subdivided {
             return result;
         }
 
-        // unwrap segments because they exist after subdivision
-        let ne: &QuadTree = self.north_east.as_ref().unwrap();
-        let nw: &QuadTree = self.north_west.as_ref().unwrap();
-        let se: &QuadTree = self.south_east.as_ref().unwrap();
-        let sw: &QuadTree = self.south_west.as_ref().unwrap();
+        // get segments
+        let (ne, nw, se, sw) = self.get_segments_as_ref();
 
-        let mut result: Vec<&TreeNode> = vec![];
+        // add children of subdivions to return result
+        let child_list: &[&TreeNode] = &[
+            ne.get_childen(),
+            nw.get_childen(),
+            se.get_childen(),
+            sw.get_childen(),
+        ]
+        .concat();
 
-        for child_list in [
-            self.children.as_slice(),
-            ne.children.as_slice(),
-            nw.children.as_slice(),
-            se.children.as_slice(),
-            sw.children.as_slice(),
-        ] {
-            for child in child_list {
-                result.push(child);
-            }
+        for child in child_list {
+            result.push(child);
         }
 
         return result;
@@ -122,11 +113,8 @@ impl QuadTree {
             return vec![&self.rect];
         }
 
-        // unwrap segments because they exist after subdivision
-        let ne: &QuadTree = self.north_east.as_ref().unwrap();
-        let nw: &QuadTree = self.north_west.as_ref().unwrap();
-        let se: &QuadTree = self.south_east.as_ref().unwrap();
-        let sw: &QuadTree = self.south_west.as_ref().unwrap();
+        // get segments
+        let (ne, nw, se, sw) = self.get_segments_as_ref();
 
         let mut result: Vec<&Rect> = vec![];
 
@@ -183,5 +171,35 @@ impl QuadTree {
 
         // mark as subdivided
         self.subdivided = true;
+    }
+
+    fn get_segments_as_ref(&self) -> (&QuadTree, &QuadTree, &QuadTree, &QuadTree) {
+        assert!(
+            self.subdivided,
+            "Error! Cannot get segments before subdividing tree!"
+        );
+
+        return (
+            self.north_east.as_ref().unwrap(),
+            self.north_west.as_ref().unwrap(),
+            self.south_east.as_ref().unwrap(),
+            self.south_west.as_ref().unwrap(),
+        );
+    }
+
+    fn get_segments_as_mut(
+        &mut self,
+    ) -> (&mut QuadTree, &mut QuadTree, &mut QuadTree, &mut QuadTree) {
+        assert!(
+            self.subdivided,
+            "Error! Cannot get segments before subdividing tree!"
+        );
+
+        return (
+            self.north_east.as_mut().unwrap(),
+            self.north_west.as_mut().unwrap(),
+            self.south_east.as_mut().unwrap(),
+            self.south_west.as_mut().unwrap(),
+        );
     }
 }

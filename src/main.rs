@@ -10,7 +10,7 @@ mod quadtree;
 
 const WORLD_HEIGHT: f32 = 600.0;
 const WORLD_WIDTH: f32 = 1000.0;
-const QTREE_CAPACITY: usize = 5;
+const QTREE_CAPACITY: usize = 6;
 
 #[derive(Resource, Debug, Default, Deref, DerefMut)]
 struct WorldTree(pub QuadTree);
@@ -41,7 +41,7 @@ fn setup(
     let mut rng = rand::thread_rng();
     let spawn_padding: f32 = 10.0;
 
-    for _ in 1..100 {
+    for _ in 0..100 {
         let x: f32 = rng
             .gen_range(-(WORLD_WIDTH / 2.0) + spawn_padding..(WORLD_WIDTH / 2.0) - spawn_padding);
         let y: f32 = rng
@@ -58,7 +58,7 @@ fn setup(
             .id();
 
         // add entity to quadtree
-        world_tree.insert(TreeNode::new(Some(entity), x, y));
+        world_tree.insert(&TreeNode::new(Some(entity), x, y));
     }
 
     info!("Children: {:?}", world_tree.get_childen().len());
@@ -66,9 +66,6 @@ fn setup(
         "Number of Subdivisions: {}",
         world_tree.get_tree_rects().len()
     );
-    // info!("{:?}", world_tree);
-    info!("Is Subdivided: {}", world_tree.subdivided);
-    info!("All Tree Rects: {:?}", world_tree.get_tree_rects().len());
 }
 
 fn draw_qtree_gizmos(mut gizmos: Gizmos, world_tree: ResMut<WorldTree>, _time: Res<Time>) {
