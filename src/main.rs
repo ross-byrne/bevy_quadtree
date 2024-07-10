@@ -12,6 +12,8 @@ mod quadtree;
 const WORLD_HEIGHT: f32 = 600.0;
 const WORLD_WIDTH: f32 = 1000.0;
 const QTREE_CAPACITY: usize = 6;
+const CAPTURE_RECT_HEIGHT: f32 = 120.0;
+const CAPTURE_RECT_WIDTH: f32 = 160.0;
 
 #[derive(Component)]
 struct MainCamera;
@@ -90,7 +92,7 @@ fn draw_qtree_gizmos(
         gizmos.rect_2d(
             tansform.translation.xy(),
             0.0,
-            Vec2::new(160.0, 120.0),
+            Vec2::new(CAPTURE_RECT_WIDTH, CAPTURE_RECT_HEIGHT),
             Color::from(RED),
         );
     };
@@ -129,5 +131,7 @@ fn mouse_button_input(
             CaptureRect,
             Transform::from_xyz(world_position.x, world_position.y, 1.0),
         ));
+
+        // change colour of points within capture rect
     }
 }
