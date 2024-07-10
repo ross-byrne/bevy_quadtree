@@ -2,4 +2,4 @@
 Quadtree Implementation in the Bevy game engine.
 
 # Screenshot
-![Alt text](./screenshot.png "QuadTree")
+![Alt text](screenshot.png "QuadTree")
