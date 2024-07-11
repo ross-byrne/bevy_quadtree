@@ -3,13 +3,13 @@ use bevy::prelude::*;
 #[derive(Component, Debug, Default, Clone)]
 pub struct TreeNode {
     pub position: Vec2,
-    pub _entity: Option<Entity>,
+    pub entity: Option<Entity>,
 }
 
 impl TreeNode {
-    pub fn new(_entity: Option<Entity>, x: f32, y: f32) -> Self {
+    pub fn new(entity: Option<Entity>, x: f32, y: f32) -> Self {
         return Self {
-            _entity,
+            entity,
             position: Vec2::new(x, y),
         };
     }

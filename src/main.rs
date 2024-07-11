@@ -1,6 +1,6 @@
 use bevy::window::PrimaryWindow;
 use bevy::{
-    color::palettes::css::{GREEN, RED},
+    color::palettes::css::{GREEN, RED, ROYAL_BLUE},
     prelude::*,
     sprite::{MaterialMesh2dBundle, Mesh2dHandle, Wireframe2dPlugin},
 };
@@ -12,8 +12,11 @@ mod quadtree;
 const WORLD_HEIGHT: f32 = 600.0;
 const WORLD_WIDTH: f32 = 1000.0;
 const QTREE_CAPACITY: usize = 6;
+
 const CAPTURE_RECT_HEIGHT: f32 = 120.0;
 const CAPTURE_RECT_WIDTH: f32 = 160.0;
+
+const POINT_RADIUS: f32 = 5.0;
 
 #[derive(Component)]
 struct MainCamera;
@@ -22,21 +25,20 @@ struct MainCamera;
 struct WorldTree(pub QuadTree);
 
 #[derive(Component)]
+struct Points;
+
+#[derive(Component)]
 struct CaptureRect;
+
+#[derive(Component)]
+struct Captured;
 
 fn main() {
     App::new()
         .init_resource::<WorldTree>()
         .add_plugins((DefaultPlugins, Wireframe2dPlugin))
         .add_systems(Startup, setup)
-        .add_systems(
-            Update,
-            (
-                draw_qtree_gizmos,
-                mouse_button_input,
-                colour_selected_points,
-            ),
-        )
+        .add_systems(Update, (draw_qtree_gizmos, mouse_button_input))
         .run();
 }
 
@@ -65,12 +67,17 @@ fn setup(
 
         // spawn entity
         let entity: Entity = commands
-            .spawn(MaterialMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(Circle { radius: 5.0 })),
-                material: materials.add(Color::WHITE),
-                transform: Transform::from_xyz(x, y, 0.0),
-                ..default()
-            })
+            .spawn((
+                MaterialMesh2dBundle {
+                    mesh: Mesh2dHandle(meshes.add(Circle {
+                        radius: POINT_RADIUS,
+                    })),
+                    material: materials.add(Color::WHITE),
+                    transform: Transform::from_xyz(x, y, 0.0),
+                    ..default()
+                },
+                Points,
+            ))
             .id();
 
         // add entity to quadtree
@@ -107,10 +114,14 @@ fn draw_qtree_gizmos(
 
 fn mouse_button_input(
     mut commands: Commands,
+    world_tree: ResMut<WorldTree>,
     buttons: Res<ButtonInput<MouseButton>>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     capture_rect: Query<Entity, With<CaptureRect>>,
+    captured_points: Query<Entity, (With<Points>, With<Captured>)>,
+    points: Query<Entity, With<Points>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     if buttons.just_pressed(MouseButton::Left) {
         let window = q_window.single();
@@ -126,11 +137,17 @@ fn mouse_button_input(
             return;
         };
 
-        info!("World coords: {}/{}", world_position.x, world_position.y);
+        // remove existing tagged points and reset colour
+        for entity in captured_points.iter() {
+            commands
+                .entity(entity)
+                .remove::<Captured>()
+                .insert(materials.add(Color::WHITE));
+        }
 
-        if let Ok(entity) = capture_rect.get_single() {
+        if let Ok(capture_rect_entity) = capture_rect.get_single() {
             // remove exiting capture rect
-            commands.entity(entity).despawn_recursive();
+            commands.entity(capture_rect_entity).despawn_recursive();
         }
 
         // spawn new one
@@ -139,30 +156,28 @@ fn mouse_button_input(
             Transform::from_xyz(world_position.x, world_position.y, 1.0),
         ));
 
-        // change colour of points within capture rect
+        // build catpure rect to test qtree
+        let range: Rect = Rect::from_center_size(
+            Vec2::from(world_position),
+            Vec2::new(CAPTURE_RECT_WIDTH, CAPTURE_RECT_HEIGHT),
+        );
+
+        // get children
+        let contained: Vec<&TreeNode> = world_tree.query(&range);
+        info!("Children in range: {}", contained.len());
+
+        // tag new points to highlight them
+        for child in contained.iter() {
+            let Some(saved_entity) = child.entity else {
+                continue;
+            };
+
+            if let Ok(entity) = points.get(saved_entity) {
+                commands
+                    .entity(entity)
+                    .insert(Captured)
+                    .insert(materials.add(Color::from(ROYAL_BLUE)));
+            }
+        }
     }
-}
-
-fn colour_selected_points(
-    _commands: Commands,
-    capture_rect: Query<&Transform, With<CaptureRect>>,
-    world_tree: ResMut<WorldTree>,
-) {
-    // get capture rect or return
-    let Ok(transform) = capture_rect.get_single() else {
-        return;
-    };
-
-    // find all points inside capture rect by asking the qtree
-    let children = world_tree.get_childen();
-    info!("All Children: {}", children.len());
-
-    // build catpure rect to test qtree
-    let range: Rect = Rect::from_center_size(
-        Vec2::from(transform.translation.xy()),
-        Vec2::new(CAPTURE_RECT_WIDTH, CAPTURE_RECT_HEIGHT),
-    );
-
-    let contained: Vec<&TreeNode> = world_tree.query(&range);
-    info!("Children in range: {}", contained.len());
 }
