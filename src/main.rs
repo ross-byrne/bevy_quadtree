@@ -33,12 +33,22 @@ struct CaptureRect;
 #[derive(Component)]
 struct Captured;
 
+#[derive(Event)]
+struct UntagPoints;
+
+#[derive(Event)]
+struct TagPoints {
+    origin: Vec2,
+}
+
 fn main() {
     App::new()
         .init_resource::<WorldTree>()
         .add_plugins((DefaultPlugins, Wireframe2dPlugin))
         .add_systems(Startup, setup)
         .add_systems(Update, (draw_qtree_gizmos, mouse_button_input))
+        .observe(tag_points)
+        .observe(untag_points)
         .run();
 }
 
@@ -114,14 +124,9 @@ fn draw_qtree_gizmos(
 
 fn mouse_button_input(
     mut commands: Commands,
-    world_tree: ResMut<WorldTree>,
     buttons: Res<ButtonInput<MouseButton>>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    capture_rect: Query<Entity, With<CaptureRect>>,
-    captured_points: Query<Entity, (With<Points>, With<Captured>)>,
-    points: Query<Entity, With<Points>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     if buttons.just_pressed(MouseButton::Left) {
         let window = q_window.single();
@@ -137,47 +142,74 @@ fn mouse_button_input(
             return;
         };
 
-        // remove existing tagged points and reset colour
-        for entity in captured_points.iter() {
+        // remove existing tagged points
+        commands.trigger(UntagPoints);
+
+        // tag points in capture range
+        commands.trigger(TagPoints {
+            origin: Vec2::from(world_position),
+        });
+    }
+}
+
+fn untag_points(
+    _: Trigger<UntagPoints>,
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    capture_rect: Query<Entity, With<CaptureRect>>,
+    captured_points: Query<Entity, (With<Points>, With<Captured>)>,
+) {
+    // remove existing capture rect
+    if let Ok(capture_rect_entity) = capture_rect.get_single() {
+        commands.entity(capture_rect_entity).despawn_recursive();
+    }
+
+    // reset all captured points
+    for entity in captured_points.iter() {
+        commands
+            .entity(entity)
+            .remove::<Captured>()
+            .insert(materials.add(Color::WHITE));
+    }
+}
+
+fn tag_points(
+    trigger: Trigger<TagPoints>,
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    world_tree: ResMut<WorldTree>,
+    points: Query<Entity, With<Points>>,
+) {
+    // get clicked origin position
+    let capture_origin = trigger.event().origin;
+
+    // spawn a new capture rect
+    commands.spawn((
+        CaptureRect,
+        Transform::from_xyz(capture_origin.x, capture_origin.y, 1.0),
+    ));
+
+    // build catpure rect to test qtree
+    let range: Rect = Rect::from_center_size(
+        Vec2::from(capture_origin),
+        Vec2::new(CAPTURE_RECT_WIDTH, CAPTURE_RECT_HEIGHT),
+    );
+
+    // get children from tree
+    let contained: Vec<&TreeNode> = world_tree.query(&range);
+    info!("Children in range: {}", contained.len());
+
+    // tag new points to highlight them
+    for child in contained.iter() {
+        let Some(saved_entity) = child.entity else {
+            continue;
+        };
+
+        if let Ok(entity) = points.get(saved_entity) {
             commands
                 .entity(entity)
-                .remove::<Captured>()
-                .insert(materials.add(Color::WHITE));
-        }
-
-        if let Ok(capture_rect_entity) = capture_rect.get_single() {
-            // remove exiting capture rect
-            commands.entity(capture_rect_entity).despawn_recursive();
-        }
-
-        // spawn new one
-        commands.spawn((
-            CaptureRect,
-            Transform::from_xyz(world_position.x, world_position.y, 1.0),
-        ));
-
-        // build catpure rect to test qtree
-        let range: Rect = Rect::from_center_size(
-            Vec2::from(world_position),
-            Vec2::new(CAPTURE_RECT_WIDTH, CAPTURE_RECT_HEIGHT),
-        );
-
-        // get children
-        let contained: Vec<&TreeNode> = world_tree.query(&range);
-        info!("Children in range: {}", contained.len());
-
-        // tag new points to highlight them
-        for child in contained.iter() {
-            let Some(saved_entity) = child.entity else {
-                continue;
-            };
-
-            if let Ok(entity) = points.get(saved_entity) {
-                commands
-                    .entity(entity)
-                    .insert(Captured)
-                    .insert(materials.add(Color::from(ROYAL_BLUE)));
-            }
+                .insert(Captured)
+                .insert(materials.add(Color::from(ROYAL_BLUE)));
         }
     }
 }
