@@ -29,7 +29,14 @@ fn main() {
         .init_resource::<WorldTree>()
         .add_plugins((DefaultPlugins, Wireframe2dPlugin))
         .add_systems(Startup, setup)
-        .add_systems(Update, (draw_qtree_gizmos, mouse_button_input))
+        .add_systems(
+            Update,
+            (
+                draw_qtree_gizmos,
+                mouse_button_input,
+                colour_selected_points,
+            ),
+        )
         .run();
 }
 
@@ -134,4 +141,28 @@ fn mouse_button_input(
 
         // change colour of points within capture rect
     }
+}
+
+fn colour_selected_points(
+    _commands: Commands,
+    capture_rect: Query<&Transform, With<CaptureRect>>,
+    world_tree: ResMut<WorldTree>,
+) {
+    // get capture rect or return
+    let Ok(transform) = capture_rect.get_single() else {
+        return;
+    };
+
+    // find all points inside capture rect by asking the qtree
+    let children = world_tree.get_childen();
+    info!("All Children: {}", children.len());
+
+    // build catpure rect to test qtree
+    let range: Rect = Rect::from_center_size(
+        Vec2::from(transform.translation.xy()),
+        Vec2::new(CAPTURE_RECT_WIDTH, CAPTURE_RECT_HEIGHT),
+    );
+
+    let contained: Vec<&TreeNode> = world_tree.query(&range);
+    info!("Children in range: {}", contained.len());
 }

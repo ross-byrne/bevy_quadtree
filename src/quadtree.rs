@@ -79,6 +79,47 @@ impl QuadTree {
         return result;
     }
 
+    pub fn query(&self, range: &Rect) -> Vec<&TreeNode> {
+        // check if range is contained within current segment
+        let intersection = self.rect.intersect(*range);
+        if intersection.is_empty() {
+            return Vec::new();
+        }
+
+        let mut result: Vec<&TreeNode> = Vec::new();
+
+        // test if children are inside capture rect
+        for child in self.children.as_slice() {
+            if range.contains(child.position) {
+                result.push(child);
+            }
+        }
+
+        // no subdivisions, return result
+        if !self.subdivided {
+            return result;
+        }
+
+        // check subdivisions
+        let (ne, nw, se, sw) = self.get_segments_as_ref();
+
+        // query subdivisions with range
+        let child_list: &[&TreeNode] = &[
+            ne.query(range),
+            nw.query(range),
+            se.query(range),
+            sw.query(range),
+        ]
+        .concat();
+
+        // collect into result
+        for child in child_list {
+            result.push(child);
+        }
+
+        return result;
+    }
+
     pub fn get_childen(&self) -> Vec<&TreeNode> {
         // get children as ref
         let mut result = self.children.iter().collect::<Vec<&TreeNode>>();
