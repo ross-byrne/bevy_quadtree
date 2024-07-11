@@ -50,8 +50,8 @@ fn setup(
 
     // initialise world tree. Centered to 0.0, 0.0
     let origin: Vec2 = Vec2::new(0.0, 0.0);
-    let half_size: Vec2 = Vec2::new(WORLD_WIDTH / 2.0, WORLD_HEIGHT / 2.0);
-    *world_tree = WorldTree(QuadTree::new(origin, half_size, QTREE_CAPACITY));
+    let size: Vec2 = Vec2::new(WORLD_WIDTH, WORLD_HEIGHT);
+    *world_tree = WorldTree(QuadTree::new(origin, size, QTREE_CAPACITY));
 
     // create some objects
     let mut rng = rand::thread_rng();

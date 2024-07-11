@@ -35,9 +35,9 @@ impl QuadTree {
         return Self::new_segment(origin, half_size, capacity, 0);
     }
 
-    fn new_segment(origin: Vec2, half_size: Vec2, capacity: usize, index: usize) -> Self {
+    fn new_segment(origin: Vec2, size: Vec2, capacity: usize, index: usize) -> Self {
         return Self {
-            rect: Rect::from_center_half_size(origin, half_size),
+            rect: Rect::from_center_size(origin, size),
             capacity,
             index,
             subdivided: false,
@@ -187,28 +187,26 @@ impl QuadTree {
     }
 
     fn subdivide_tree(&mut self) {
-        // calculate size of new segment by getting a quarter of the parent size
-        // because we need half the parent size
-        // and half of that again to create new rect
-        let h = self.rect.height() / 4.0;
-        let w = self.rect.width() / 4.0;
-        let half_size: Vec2 = Vec2::new(w, h);
+        // calculate size of new segment by getting a half of the parent size
+        let h = self.rect.height() / 2.0;
+        let w = self.rect.width() / 2.0;
+        let size: Vec2 = Vec2::new(w, h);
 
         // parent origin
         let x = self.rect.center().x;
         let y = self.rect.center().y;
 
         // calculate origin point for each new section
-        let ne_origin: Vec2 = Vec2::new(x - w, y + h);
-        let nw_origin: Vec2 = Vec2::new(x + w, y + h);
-        let se_origin: Vec2 = Vec2::new(x - w, y - h);
-        let sw_origin: Vec2 = Vec2::new(x + w, y - h);
+        let ne_origin: Vec2 = Vec2::new(x - (w / 2.0), y + (h / 2.0));
+        let nw_origin: Vec2 = Vec2::new(x + (w / 2.0), y + (h / 2.0));
+        let se_origin: Vec2 = Vec2::new(x - (w / 2.0), y - (h / 2.0));
+        let sw_origin: Vec2 = Vec2::new(x + (w / 2.0), y - (h / 2.0));
 
         // create new tree segments
-        self.north_east = self.new_tree_segment(&ne_origin, &half_size);
-        self.north_west = self.new_tree_segment(&nw_origin, &half_size);
-        self.south_east = self.new_tree_segment(&se_origin, &half_size);
-        self.south_west = self.new_tree_segment(&sw_origin, &half_size);
+        self.north_east = self.new_tree_segment(&ne_origin, &size);
+        self.north_west = self.new_tree_segment(&nw_origin, &size);
+        self.south_east = self.new_tree_segment(&se_origin, &size);
+        self.south_west = self.new_tree_segment(&sw_origin, &size);
 
         // mark as subdivided
         self.subdivided = true;
