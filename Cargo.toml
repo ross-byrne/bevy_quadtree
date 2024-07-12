@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { version = "0.14.0", features = [
+bevy = { version = "0.14.0", default-features = false, features = [
     "dynamic_linking", # Remove for release build
+    "bevy_winit",
+    "bevy_color",
+    "bevy_sprite",
+    "bevy_gizmos",
 ] }
 rand = "0.8.5"
 
