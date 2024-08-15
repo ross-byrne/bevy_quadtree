@@ -10,6 +10,7 @@ bevy = { version = "0.14.0", default-features = false, features = [
     "bevy_color",
     "bevy_sprite",
     "bevy_gizmos",
+    "x11",
 ] }
 rand = "0.8.5"
 
