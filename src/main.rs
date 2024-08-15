@@ -6,6 +6,7 @@ use bevy::{
 };
 use quadtree::{QuadTree, TreeNode};
 use rand::prelude::*;
+use std::time::Instant;
 
 mod quadtree;
 
@@ -195,9 +196,16 @@ fn tag_points(
         Vec2::new(CAPTURE_RECT_WIDTH, CAPTURE_RECT_HEIGHT),
     );
 
+    let before = Instant::now();
+    let mut count: i32 = 0;
     // get children from tree
-    let contained: Vec<&TreeNode> = world_tree.query(&range);
-    info!("Children in range: {}", contained.len());
+    let contained: Vec<&TreeNode> = world_tree.query(&range, &mut count);
+    info!(
+        "Children in range: {}. Comparisons: {}. Time taken: {:?}",
+        contained.len(),
+        count,
+        before.elapsed()
+    );
 
     // tag new points to highlight them
     for child in contained.iter() {

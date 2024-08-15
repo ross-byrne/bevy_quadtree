@@ -79,7 +79,7 @@ impl QuadTree {
         return result;
     }
 
-    pub fn query(&self, range: &Rect) -> Vec<&TreeNode> {
+    pub fn query<'a>(&self, range: &Rect, count: &'a mut i32) -> Vec<&TreeNode> {
         // check if range is contained within current segment
         let intersection = self.rect.intersect(*range);
         if intersection.is_empty() {
@@ -90,6 +90,7 @@ impl QuadTree {
 
         // test if children are inside capture rect
         for child in self.children.as_slice() {
+            *count += 1; // count comparisons
             if range.contains(child.position) {
                 result.push(child);
             }
@@ -105,10 +106,10 @@ impl QuadTree {
 
         // query subdivisions with range
         let child_list: &[&TreeNode] = &[
-            ne.query(range),
-            nw.query(range),
-            se.query(range),
-            sw.query(range),
+            ne.query(range, count),
+            nw.query(range, count),
+            se.query(range, count),
+            sw.query(range, count),
         ]
         .concat();
 
