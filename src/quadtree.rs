@@ -53,7 +53,7 @@ impl QuadTree {
         return self.rect.contains(*point);
     }
 
-    fn insert_into_subdivision(&mut self, child: &TreeNode) -> bool {
+    fn insert_into_subdivision(&mut self, child: TreeNode) -> bool {
         assert!(
             self.subdivided,
             "Cannot add child to subdivision if not subdivided!"
@@ -62,14 +62,20 @@ impl QuadTree {
         // get segments
         let (ne, nw, se, sw) = self.get_segments_as_mut();
 
-        // only insert into one segment and return
-        let result = ne.insert(child) || nw.insert(child) || se.insert(child) || sw.insert(child);
-        assert!(result, "Failed to add child to a segment!");
+        // in set order, check each segment to see if child intersects
+        for segment in [ne, nw, se, sw] {
+            // only insert into one segment and then return
+            if segment.child_intersects(&child.position) {
+                segment.insert(child);
+                return true;
+            }
+        }
 
-        return result;
+        // if no segments match, fail
+        panic!("Failed to add child to a segment!");
     }
 
-    pub fn insert(&mut self, child: &TreeNode) -> bool {
+    pub fn insert(&mut self, child: TreeNode) -> bool {
         // return false if child doesn't intersect
         if !self.child_intersects(&child.position) {
             return false;
@@ -77,7 +83,6 @@ impl QuadTree {
 
         // check if tree is subdivided (if it's a leaf node)
         if self.subdivided {
-            // add child to subdivision
             return self.insert_into_subdivision(child);
         }
 
@@ -237,15 +242,15 @@ impl QuadTree {
             "Cannot reparent children if not subdivided!"
         );
 
-        // take a copy of children and insert them back into tree
-        // this should add them to new leaf nodes
-        // TODO: update this so a copy isn't needed
-        for child in self.children.clone() {
-            self.insert(&child.to_owned());
+        // take children from current segment and add them to subdivisons
+        while !self.children.is_empty() {
+            if let Some(child) = self.children.pop() {
+                self.insert(child);
+            }
         }
 
-        // remove children from this level of the tree
-        self.children.clear();
+        // set capacity to 0 to free memory
+        self.children = Vec::with_capacity(0);
     }
 
     fn get_segments_as_ref(&self) -> (&QuadTree, &QuadTree, &QuadTree, &QuadTree) {

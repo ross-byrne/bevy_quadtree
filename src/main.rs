@@ -93,7 +93,7 @@ fn setup(
             .id();
 
         // add entity to quadtree
-        world_tree.insert(&TreeNode::new(Some(entity), x, y));
+        world_tree.insert(TreeNode::new(Some(entity), x, y));
     }
 
     info!("Children: {:?}", world_tree.get_childen().len());
