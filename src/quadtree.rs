@@ -53,21 +53,11 @@ impl QuadTree {
         return self.rect.contains(*point);
     }
 
-    pub fn insert(&mut self, child: &TreeNode) -> bool {
-        // return false if child doesn't intersect
-        if !self.child_intersects(&child.position) {
-            return false;
-        }
-
-        if self.children.len() < self.capacity {
-            self.children.push(child.to_owned());
-            return true;
-        }
-
-        // subdivide if at capacity
-        if !self.subdivided {
-            self.subdivide_tree();
-        }
+    fn insert_into_subdivision(&mut self, child: &TreeNode) -> bool {
+        assert!(
+            self.subdivided,
+            "Cannot add child to subdivision if not subdivided!"
+        );
 
         // get segments
         let (ne, nw, se, sw) = self.get_segments_as_mut();
@@ -77,6 +67,31 @@ impl QuadTree {
         assert!(result, "Failed to add child to a segment!");
 
         return result;
+    }
+
+    pub fn insert(&mut self, child: &TreeNode) -> bool {
+        // return false if child doesn't intersect
+        if !self.child_intersects(&child.position) {
+            return false;
+        }
+
+        // check if tree is subdivided (if it's a leaf node)
+        if self.subdivided {
+            // add child to subdivision
+            return self.insert_into_subdivision(child);
+        }
+
+        // if not divided, check if node has capacity
+        if self.children.len() < self.capacity {
+            self.children.push(child.to_owned());
+            return true;
+        }
+
+        // if no capacity, subdivide
+        self.subdivide_tree();
+
+        // add child to subdivision
+        return self.insert_into_subdivision(child);
     }
 
     pub fn query<'a>(&self, range: &Rect, count: &'a mut i32) -> Vec<&TreeNode> {
@@ -211,6 +226,26 @@ impl QuadTree {
 
         // mark as subdivided
         self.subdivided = true;
+
+        // reparent children to new leaf nodes
+        self.reparent_children();
+    }
+
+    fn reparent_children(&mut self) {
+        assert!(
+            self.subdivided,
+            "Cannot reparent children if not subdivided!"
+        );
+
+        // take a copy of children and insert them back into tree
+        // this should add them to new leaf nodes
+        // TODO: update this so a copy isn't needed
+        for child in self.children.clone() {
+            self.insert(&child.to_owned());
+        }
+
+        // remove children from this level of the tree
+        self.children.clear();
     }
 
     fn get_segments_as_ref(&self) -> (&QuadTree, &QuadTree, &QuadTree, &QuadTree) {

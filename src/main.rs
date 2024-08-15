@@ -13,6 +13,7 @@ mod quadtree;
 const WORLD_HEIGHT: f32 = 600.0;
 const WORLD_WIDTH: f32 = 1000.0;
 const QTREE_CAPACITY: usize = 6;
+const NUMBER_OF_POINTS: usize = 200;
 
 const CAPTURE_RECT_HEIGHT: f32 = 120.0;
 const CAPTURE_RECT_WIDTH: f32 = 160.0;
@@ -70,7 +71,7 @@ fn setup(
     let mut rng = rand::thread_rng();
     let spawn_padding: f32 = 10.0;
 
-    for _ in 0..100 {
+    for _ in 0..NUMBER_OF_POINTS {
         let x: f32 = rng
             .gen_range(-(WORLD_WIDTH / 2.0) + spawn_padding..(WORLD_WIDTH / 2.0) - spawn_padding);
         let y: f32 = rng
