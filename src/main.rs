@@ -62,6 +62,9 @@ fn setup(
 ) {
     commands.spawn((Camera2dBundle::default(), MainCamera));
 
+    // benchmark
+    let before = Instant::now();
+
     // initialise world tree. Centered to 0.0, 0.0
     let origin: Vec2 = Vec2::new(0.0, 0.0);
     let size: Vec2 = Vec2::new(WORLD_WIDTH, WORLD_HEIGHT);
@@ -101,6 +104,8 @@ fn setup(
         "Number of Subdivisions: {}",
         world_tree.get_tree_rects().len()
     );
+
+    info!("Time taken to setup: {:?}", before.elapsed());
 }
 
 fn draw_qtree_gizmos(
