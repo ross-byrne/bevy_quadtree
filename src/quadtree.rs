@@ -248,9 +248,6 @@ impl QuadTree {
                 self.insert(child);
             }
         }
-
-        // set capacity to 0 to free memory
-        self.children = Vec::with_capacity(0);
     }
 
     fn get_segments_as_ref(&self) -> (&QuadTree, &QuadTree, &QuadTree, &QuadTree) {
